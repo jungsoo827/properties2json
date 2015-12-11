@@ -7,4 +7,4 @@ Recursively copies source directory to target directory, converting all .propert
 
 # Running
 
-    mkdir target/test; java -jar target/p2j-1.0.0.jar -Source src/test -Target target/test
+    mkdir target/test; java -jar target/p2j-1.0.1.jar -Source src/test -Target target/test
