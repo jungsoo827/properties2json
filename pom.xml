@@ -4,7 +4,7 @@
 
 	<groupId>fr.broeglin.tools</groupId>
 	<artifactId>properties2json</artifactId>
-	<version>1.0.1</version>
+	<version>1.0.2</version>
 	<packaging>jar</packaging>
 
 	<url>https://github.com/dbroeglin/properties2json</url>
