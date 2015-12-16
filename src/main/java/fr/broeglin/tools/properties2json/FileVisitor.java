@@ -1,9 +1,12 @@
 package fr.broeglin.tools.properties2json;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.RandomAccessFile;
+import java.io.UnsupportedEncodingException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,16 +21,18 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 
 public class FileVisitor extends SimpleFileVisitor<Path> {
+  private static final Pattern NOT_OK_CONTENT_PATTERN = Pattern.compile("^\\s*[{\\[\"].*",
+      Pattern.DOTALL | Pattern.MULTILINE);
 
   private Path source;
   private Path target;
-  private Pattern exclude;
+  private Pattern excludePattern;
   private Gson gson;
 
   public FileVisitor(Path source, Path target, String excludeString) {
     this.source = source;
     this.target = target;
-    this.exclude = Pattern.compile(excludeString);
+    this.excludePattern = Pattern.compile(excludeString);
     this.gson = new GsonBuilder().setPrettyPrinting().create();
   }
 
@@ -36,10 +41,9 @@ public class FileVisitor extends SimpleFileVisitor<Path> {
       throws IOException {
     Path relativeParent = computeRelativeSourceParent(sourceFile);
     Path targetParent = Files.createDirectories(target.resolve(relativeParent));
-    Path fileName = sourceFile.getFileName();
 
-    if (isPropertyFile(fileName)) {
-      Path targetJson = targetParent.resolve(computeNewFileName(fileName));
+    if (isPropertyFile(sourceFile)) {
+      Path targetJson = targetParent.resolve(computeNewFileName(sourceFile.getFileName()));
 
       convertProperties(sourceFile, targetJson);
     } else {
@@ -92,14 +96,38 @@ public class FileVisitor extends SimpleFileVisitor<Path> {
     return jsonData;
   }
 
-  boolean isPropertyFile(Path fileName) {
-    String fileNameString = fileName.toString();
+  boolean isPropertyFile(Path file) throws IOException {
+    String fileNameString = file.getFileName().toString();
 
-    return fileNameString.endsWith(".properties") 
-        && !exclude.matcher(fileNameString).matches();
+    return fileNameString.endsWith(".properties")
+        && !excludePattern.matcher(fileNameString).matches()
+        && contentIsOk(file);
   }
 
-  private void logPath(Path path) {
-    System.out.println(path);
+  /**
+   * Heuristic method that reads 1024 bytes and looks for either "{", "[" or '"'
+   * as the first non space character in those.
+   * 
+   * @param fileName
+   * @return true if the characters are not found.
+   * @throws IOException
+   */
+  private boolean contentIsOk(Path fileName) throws IOException {
+    try {
+      byte[] buf = new byte[1024];
+      try (RandomAccessFile raf = new RandomAccessFile(fileName.toFile(), "r")) {
+        try {
+          raf.readFully(buf);
+        } catch (EOFException e) {
+          // OK to ignore, we just want the min number of bytes
+          // between the file length and the buffer size
+        }
+      }
+      String content = new String(buf, "UTF-8");
+
+      return !NOT_OK_CONTENT_PATTERN.matcher(content).matches();
+    } catch (UnsupportedEncodingException e) {
+      throw new RuntimeException("Got encoding exception (should not happen on JVM!)", e);
+    }
   }
 }
