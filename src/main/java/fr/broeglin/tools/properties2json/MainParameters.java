@@ -11,4 +11,8 @@ public class MainParameters {
 
   @Parameter(names = { "-Target" }, description = "Target directory", converter = PathConverter.class, required = true)
   Path target;
+
+  @Parameter(names = {
+      "-Exclude" }, description = "Exclusion pattern (java pattern)")
+  String exclude = "^$";
 }

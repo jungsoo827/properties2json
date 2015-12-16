@@ -18,9 +18,10 @@ public class Main {
 
     System.err.println("Source: " + params.source);
     System.err.println("Target: " + params.target);
+    System.err.println("Exclude: " + params.exclude);
 
     try {
-      Files.walkFileTree(params.source, new FileVisitor(params.source, params.target));
+      Files.walkFileTree(params.source, new FileVisitor(params.source, params.target, params.exclude));
     } catch (IOException e) {
       System.err.println("IO error while walking converting");
       e.printStackTrace();

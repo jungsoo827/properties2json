@@ -11,6 +11,7 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Properties;
+import java.util.regex.Pattern;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -20,11 +21,13 @@ public class FileVisitor extends SimpleFileVisitor<Path> {
 
   private Path source;
   private Path target;
+  private Pattern exclude;
   private Gson gson;
 
-  public FileVisitor(Path source, Path target) {
+  public FileVisitor(Path source, Path target, String excludeString) {
     this.source = source;
     this.target = target;
+    this.exclude = Pattern.compile(excludeString);
     this.gson = new GsonBuilder().setPrettyPrinting().create();
   }
 
@@ -41,7 +44,7 @@ public class FileVisitor extends SimpleFileVisitor<Path> {
       convertProperties(sourceFile, targetJson);
     } else {
       Path targetFile = targetParent.resolve(sourceFile.getFileName());
-      
+
       System.out.format("Copying    '%s' to '%s'...\n", sourceFile, targetFile);
       Files.copy(sourceFile, targetFile);
     }
@@ -52,12 +55,12 @@ public class FileVisitor extends SimpleFileVisitor<Path> {
   Path computeRelativeSourceParent(Path sourceFile) {
     Path relativeSourceFile = source.relativize(sourceFile);
     Path relativeParent = relativeSourceFile.getParent();
-    
+
     return relativeParent == null ? Paths.get("") : relativeParent;
   }
 
   String computeNewFileName(Path fileName) {
-    return fileName.toString().replaceFirst(".properties$", ".json");
+    return "__" + fileName.toString() + ".json";
   }
 
   private void convertProperties(Path source, Path target) {
@@ -90,7 +93,10 @@ public class FileVisitor extends SimpleFileVisitor<Path> {
   }
 
   boolean isPropertyFile(Path fileName) {
-    return fileName.toString().endsWith(".properties");
+    String fileNameString = fileName.toString();
+
+    return fileNameString.endsWith(".properties") 
+        && !exclude.matcher(fileNameString).matches();
   }
 
   private void logPath(Path path) {

@@ -16,7 +16,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class FileVisitorTest {
-  FileVisitor visitor = new FileVisitor(null, null);
+  FileVisitor visitor = new FileVisitor(null, null, "^(a.properties)$");
   Properties props;
 
   @Test
@@ -44,7 +44,7 @@ public class FileVisitorTest {
 
     assertThat(visitor.convertToJson(props), equalTo("{\n  \"a.b.c\": \"1\"\n}"));
   }
-
+  
   @Test
   public void should_convert_two_property_to_json() {
     props.put("a.b.c", "1");
@@ -55,17 +55,27 @@ public class FileVisitorTest {
 
   @Test
   public void should_rename_ending_with_properties() {
-    assertThat(visitor.computeNewFileName(Paths.get("test.properties")), equalTo("test.json"));
+    assertThat(visitor.computeNewFileName(Paths.get("test.properties")), equalTo("__test.properties.json"));
+  }
+  
+  @Test
+  public void should_rename_ending_with_properties_and_does_not_match_excludes() {
+    assertThat(visitor.computeNewFileName(Paths.get("aa.properties")), equalTo("__aa.properties.json"));
+  }
+
+  @Test
+  public void should_not_rename_excluded() {
+    assertThat(visitor.isPropertyFile(Paths.get("a.properties")), equalTo(false));
   }
 
   @Test
   public void should_not_rename_if_not_ending_with_properties() {
-    assertThat(visitor.computeNewFileName(Paths.get("test.properties1")), equalTo("test.properties1"));
+    assertThat(visitor.isPropertyFile(Paths.get("test.properties1")), equalTo(false));
   }
 
   @Test
   public void should_compute_relative_parent_as_empty() {
-    FileVisitor visitor = new FileVisitor(Paths.get("source_dir"), null);
+    FileVisitor visitor = new FileVisitor(Paths.get("source_dir"), null, "");
 
     assertThat(visitor.computeRelativeSourceParent(Paths.get("source_dir/a")), 
         equalTo(Paths.get("")));
@@ -73,12 +83,12 @@ public class FileVisitorTest {
 
   @Test
   public void should_compute_relative_parent_as_a() {
-    FileVisitor visitor = new FileVisitor(Paths.get("source_dir"), null);
+    FileVisitor visitor = new FileVisitor(Paths.get("source_dir"), null, "");
 
     assertThat(visitor.computeRelativeSourceParent(Paths.get("source_dir/a/b.txt")), 
         equalTo(Paths.get("a")));
 
-    visitor = new FileVisitor(Paths.get("/source_dir"), null);
+    visitor = new FileVisitor(Paths.get("/source_dir"), null, "");
 
     assertThat(visitor.computeRelativeSourceParent(Paths.get("/source_dir/a/b.txt")), 
         equalTo(Paths.get("a")));
