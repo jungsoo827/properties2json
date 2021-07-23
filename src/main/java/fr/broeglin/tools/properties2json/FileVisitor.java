@@ -13,14 +13,20 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.TreeMap;
 import java.util.regex.Pattern;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonObject;
+import org.apache.commons.lang3.StringEscapeUtils;
 
 public class FileVisitor extends SimpleFileVisitor<Path> {
+
   private static final Pattern NOT_OK_CONTENT_PATTERN = Pattern.compile("^\\s*[{\\[\"].*",
       Pattern.DOTALL | Pattern.MULTILINE);
 
@@ -64,7 +70,7 @@ public class FileVisitor extends SimpleFileVisitor<Path> {
   }
 
   String computeNewFileName(Path fileName) {
-    return "__" + fileName.toString() + ".json";
+    return fileName.toString() + ".json";
   }
 
   private void convertProperties(Path source, Path target) {
@@ -87,13 +93,57 @@ public class FileVisitor extends SimpleFileVisitor<Path> {
     }
   }
 
+  private Map<String, Object> createTree(List<String> keys, Map<String, Object> map) {
+//    System.out.println(map.toString());
+    Object mapValue = map.get(keys.get(0));
+//    System.out.println(keys.get(0));
+
+    Map<String, Object> valueMap = null;
+//    if (mapValue != null) {
+//      System.out.println(mapValue.toString());
+//    }
+    if (mapValue != null && mapValue instanceof Map) {
+      valueMap = (Map<String, Object>) mapValue;
+//    } else if (mapValue != null) {
+//      System.out.println(mapValue.toString());
+    }
+    if (valueMap == null) {
+      valueMap = new TreeMap<String, Object>();
+    }
+    map.put(keys.get(0), valueMap);
+    Map<String, Object> out = valueMap;
+    if (keys.size() > 2) {
+      out = createTree(keys.subList(1, keys.size()), valueMap);
+    }
+    return out;
+  }
+
   String convertToJson(Properties props) {
-    JsonObject json = new JsonObject();
-    props.forEach((name, value) -> {
-      json.addProperty((String) name, (String) value);
-    });
-    String jsonData = gson.toJson(json);
-    return jsonData;
+//    JsonObject json = new JsonObject();
+//    props.forEach((name, value) -> {
+//      json.addProperty((String) name, (String) value);
+//    });
+//    String jsonData = gson.toJson(json);
+//    return jsonData;
+    Map<String, Object> map = new TreeMap<>();
+
+    for (Object key : props.keySet()) {
+      List<String> keyList = Arrays.asList(((String) key).split("\\."));
+      Map<String, Object> valueMap = createTree(keyList, map);
+      String value = props.getProperty((String) key);
+      System.out.println(key+"::"+value.toString());
+      value = StringEscapeUtils.unescapeHtml4(value);
+//      value = value.replaceAll("<", "\\<");
+//      value = value.replaceAll(">", "\\>");
+      valueMap.put(keyList.get(keyList.size() - 1), value);
+    }
+
+//    Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    Gson gson = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create();
+    String json = gson.toJson(map);
+
+    System.out.println("Ready, converts " + props.size() + " entries.");
+    return json;
   }
 
   boolean isPropertyFile(Path file) throws IOException {
@@ -105,9 +155,9 @@ public class FileVisitor extends SimpleFileVisitor<Path> {
   }
 
   /**
-   * Heuristic method that reads 1024 bytes and looks for either "{", "[" or '"'
-   * as the first non space character in those.
-   * 
+   * Heuristic method that reads 1024 bytes and looks for either "{", "[" or '"' as the first non
+   * space character in those.
+   *
    * @param fileName
    * @return true if the characters are not found.
    * @throws IOException
