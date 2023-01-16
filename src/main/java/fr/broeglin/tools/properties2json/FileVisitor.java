@@ -1,6 +1,9 @@
 package fr.broeglin.tools.properties2json;
 
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+
 import java.io.EOFException;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -17,6 +20,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
@@ -59,6 +63,28 @@ public class FileVisitor extends SimpleFileVisitor<Path> {
       Files.copy(sourceFile, targetFile);
     }
 
+    return FileVisitResult.CONTINUE;
+  }
+
+  @Override
+  public FileVisitResult postVisitDirectory(Path dir, IOException exc)
+      throws IOException
+  {
+    File targetDirectory = this.target.toFile();
+    for (File file : targetDirectory.listFiles()) {
+      if (file.isDirectory()) {
+        continue;
+      }
+      Path filePath = Paths.get(file.getAbsolutePath());
+      String fileName = filePath.getFileName().toString();
+      int startIndex = fileName.indexOf("_");
+      int endIndex = fileName.indexOf(".");
+      String languageCode = fileName.substring(startIndex + 1, endIndex);
+      Path filePathTo = Paths.get(targetDirectory.getAbsolutePath() + File.separator + languageCode + File.separator + fileName);
+      File toFile = filePathTo.toFile();
+      toFile.mkdirs();
+      Files.move(filePath, filePathTo, REPLACE_EXISTING);
+    }
     return FileVisitResult.CONTINUE;
   }
 
