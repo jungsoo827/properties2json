@@ -4,6 +4,8 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.ParameterException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyStore;
@@ -16,10 +18,10 @@ public class Main {
   public static void createKeyStore(Path keystoreFilePath, String keyAlias, String keystorePassword, String privateKey) {
 
     // Your secret key value (use ONE of these)
-    String base64KeyValue = null;
+    String base64KeyValue = privateKey;
 //    String base64KeyValue = "your-base64-encoded-key-here"; // e.g., "vE/v8/U1nZ2sA/sPjB+0gA=="
 //    String hexKeyValue = null; // e.g., "bc4ffbf3f5359d9d9b00fb0f8c1fb480"
-    String hexKeyValue = privateKey; // e.g., "bc4ffbf3f5359d9d9b00fb0f8c1fb480"
+    String hexKeyValue = null; // e.g., "bc4ffbf3f5359d9d9b00fb0f8c1fb480"
 
     // Details for the new keystore entry
     String keyAlgorithm = "AES"; // The algorithm of your key (e.g., "AES", "HmacSHA256")
@@ -32,7 +34,7 @@ public class Main {
       // --- 2. Get the raw key bytes from your string ---
       byte[] keyBytes;
       if (base64KeyValue != null) {
-        keyBytes = Base64.getDecoder().decode(base64KeyValue);
+        keyBytes = Base64.getEncoder().encode(base64KeyValue.getBytes(StandardCharsets.UTF_8));
       } else if (hexKeyValue != null) {
         keyBytes = hexToBytes(hexKeyValue);
       } else {
