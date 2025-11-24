@@ -16,15 +16,5 @@ public class MainParameters {
     "-Exclude"}, description = "Exclusion pattern (java pattern)")
   String exclude = "^$";
 
-  @Parameter(names = {"-Keystore"}, description = "Keystore directory", converter = PathConverter.class, required = false)
-  Path keystore;
 
-  @Parameter(names = {"-PrivateKey"}, description = "Private Key")
-  String privateKey;
-
-  @Parameter(names = {"-KeyAlias"}, description = "Key Alias")
-  String keyAlias;
-
-  @Parameter(names = {"-KeystorePassword"}, description = "Keystore assword")
-  String keystorePassword;
 }
